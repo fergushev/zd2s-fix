@@ -179,6 +179,7 @@ pub fn main() !void {
     defer dir_walker.deinit();
 
     if (std.mem.eql(u8, read_type, "char")) {
+        var char_timer = try std.time.Timer.start();
         while (try dir_walker.next()) |entry| {
             if (entry.kind == .file) {
                 @memset(out_buffer, 0);
@@ -241,18 +242,23 @@ pub fn main() !void {
                         try char_file.writeAll(parser.out_buffer[0..size]);
                         try char_file.setEndPos(size);
                         defer char_file.close();
+                    } else {
+                        main_log.err("Broken items: {d}: File: {s}", .{ parser.item_details.removed_items, entry.path });
                     }
                 }
             }
         }
+        const char_time_end = char_timer.read();
+        main_log.err("Total time: {d} seconds", .{char_time_end / 1_000_000_000});
     } else if (std.mem.eql(u8, read_type, "stash")) {
+        var stash_timer = try std.time.Timer.start();
         while (try dir_walker.next()) |entry| {
             if (entry.kind == .file and std.mem.eql(u8, std.fs.path.extension(entry.basename), ".nl")) {
                 var ext_it = splitSequence(u8, entry.basename, ".");
                 _ = ext_it.first();
                 const extension = ext_it.rest();
 
-                const ext = std.meta.stringToEnum(ValidExtensions, extension) orelse return error.Foo;
+                const ext = std.meta.stringToEnum(ValidExtensions, extension) orelse continue;
                 switch (ext) {
                     .@"stash.nl", .@"stash.hc.nl" => {
                         @memset(out_buffer, 0);
@@ -317,6 +323,8 @@ pub fn main() !void {
                 }
             }
         }
+        const stash_time_end = stash_timer.read();
+        main_log.err("Total time: {d} seconds", .{stash_time_end / 1_000_000_000});
     }
 }
 
