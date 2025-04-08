@@ -67,7 +67,7 @@ fn handleItemErrors(parser: *Parser, item: *BasicItem, err: anyerror) !void {
     // );
 
     switch (err) {
-        error.BadStatOrder, error.InvalidSaveBits, error.InvalidItemLength => {
+        error.BadStatOrder, error.InvalidSaveBits, error.InvalidItemLength, error.InvalidItemCode => {
             item.identifier = 0;
 
             if (item.is_socket) {
@@ -92,7 +92,7 @@ fn handleItemErrors(parser: *Parser, item: *BasicItem, err: anyerror) !void {
             // with the item bound checks this may not be possible anymore
             return err;
         },
-        error.InvalidItemCode, error.InvalidItemType => {
+        error.InvalidItemType => {
             // Almost guaranteed to mean there's an issue with the ingested .txt files
             // Not worth trying to "recover", as the problem is most likely _not_ the char file
             return err;
@@ -215,7 +215,13 @@ fn readItem(parser: *Parser, item: *charsave.BasicItem) !void {
         item.equipped = @enumFromInt(try parser.readBits(u8, 4));
         item.unit_x = try parser.readBits(u8, 4);
         item.unit_y = try parser.readBits(u8, 4);
-        item.inv_page = @enumFromInt(try parser.readBits(u8, 3) -% @as(u8, 1));
+
+        const inv_page: u8 = try parser.readBits(u8, 3) -% @as(u8, 1);
+        if (inv_page > 5 and inv_page < 255) {
+            item_log.err("Inv Page: {d}", .{inv_page});
+            return error.InvalidInvPage;
+        }
+        item.inv_page = @enumFromInt(inv_page);
 
         if (item.is_socket and item.inv_page != .null and item.animation_mode != .socketed) {
             return error.InvalidSocket;
