@@ -137,6 +137,10 @@ pub fn readItemList(parser: *Parser, items: *[]BasicItem) !void {
         .golem => details.golem_size,
     };
 
+    if (size_info.items.len == 0) {
+        return error.NoItemSizeInfo;
+    }
+
     for (items.*, 0..) |*item, i| {
         if (parser.offset == item.section_end_offset) {
             break;
