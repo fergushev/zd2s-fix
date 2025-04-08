@@ -68,10 +68,14 @@ fn handleItemErrors(parser: *Parser, item: *BasicItem, err: anyerror) !void {
 
     switch (err) {
         error.BadStatOrder,
+        error.BadStatIndex,
         error.InvalidSaveBits,
         error.InvalidItemLength,
         error.InvalidItemCode,
         error.InvalidInvPage,
+        error.InvalidAnimationMode,
+        error.InvalidEquipped,
+        error.InvalidClass,
         => {
             item.identifier = 0;
 
@@ -211,19 +215,28 @@ fn readItem(parser: *Parser, item: *charsave.BasicItem) !void {
 
     item.flags = @bitCast(try parser.readBits(u32, 32));
     item.format = try parser.readBits(u16, 10);
-    item.animation_mode = @enumFromInt(try parser.readBits(u8, 3));
+
+    const animation_mode: u8 = try parser.readBits(u8, 3);
+    if (animation_mode > 6) {
+        return error.InvalidAnimationMode;
+    }
+    item.animation_mode = @enumFromInt(animation_mode);
 
     if (item.animation_mode == .ground or item.animation_mode == .dropping) {
         item.unit_x = try parser.readBits(u16, 16);
         item.unit_y = try parser.readBits(u16, 16);
     } else {
-        item.equipped = @enumFromInt(try parser.readBits(u8, 4));
+        const equipped: u8 = try parser.readBits(u8, 4);
+        if (equipped > 12) {
+            return error.InvalidEquipped;
+        }
+        item.equipped = @enumFromInt(equipped);
+
         item.unit_x = try parser.readBits(u8, 4);
         item.unit_y = try parser.readBits(u8, 4);
 
         const inv_page: u8 = try parser.readBits(u8, 3) -% @as(u8, 1);
         if (inv_page > 5 and inv_page < 255) {
-            // item_log.err("Inv Page: {d}", .{inv_page});
             return error.InvalidInvPage;
         }
         item.inv_page = @enumFromInt(inv_page);
@@ -262,7 +275,11 @@ fn readItemsCompact(parser: *Parser, item: *charsave.BasicItem) !void {
     var quest_diff_check: u8 = undefined;
 
     if (item.flags.ear) {
-        item.ear_class = @enumFromInt(try parser.readBits(u8, 3));
+        const ear_class: u8 = try parser.readBits(u8, 3);
+        if (ear_class > 6) {
+            return error.InvalidClass;
+        }
+        item.ear_class = @enumFromInt(ear_class);
         item.ear_level = try parser.readBits(u8, 7);
         try readCharacterName(parser, item);
 
@@ -426,7 +443,11 @@ fn readItemsExtended(parser: *Parser, item: *charsave.BasicItem) !void {
     }
 
     if (item.flags.ear) {
-        item.ear_class = @enumFromInt(try parser.readBits(u8, 3));
+        const ear_class: u8 = try parser.readBits(u8, 3);
+        if (ear_class > 6) {
+            return error.InvalidEarClass;
+        }
+        item.ear_class = @enumFromInt(ear_class);
         item.ear_level = try parser.readBits(u8, 7);
         try readCharacterName(parser, item);
     } else if (item.flags.personalized) {
@@ -543,6 +564,10 @@ fn readItemsExtended(parser: *Parser, item: *charsave.BasicItem) !void {
 
             if (stat_id == max_item_stat) {
                 break;
+            }
+
+            if (stat_id > max_item_stat) {
+                return error.BadStatIndex;
             }
 
             if (stat_id < last_stat_id) {

@@ -61,7 +61,11 @@ pub fn readCharacterData(parser: *Parser) !void {
     try parser.readByteArray(&chardata.name);
     chardata.save_flags = @bitCast(try parser.readBits(u32, 32));
 
-    chardata.class = @enumFromInt(try parser.readBits(u8, 8));
+    const class: u8 = try parser.readBits(u8, 8);
+    if (class > 6) {
+        return error.InvalidClass;
+    }
+    chardata.class = @enumFromInt(class);
     chardata.stats = try parser.readBits(u8, 8);
     chardata.skills = try parser.readBits(u8, 8);
     chardata.level = try parser.readBits(u8, 8);
