@@ -23,7 +23,11 @@ pub fn readGolemItems(parser: *Parser) !void {
     golem.identifier = try parser.readBits(u16, 16);
     try verifyIdentifier(golem.identifier, .golem);
 
-    golem.has_golem = @as(u1, @intCast(try parser.readBits(u8, 8)));
+    const has_golem: u8 = try parser.readBits(u8, 8);
+    if (has_golem != 0 and has_golem != 1) {
+        return error.BadIronGolem;
+    }
+    golem.has_golem = @as(u1, @intCast(has_golem));
     if (main.log_golem) {
         golem_log.debug("HAS GOLEM: {any}", .{@as(bool, @bitCast(golem.has_golem))});
     }
