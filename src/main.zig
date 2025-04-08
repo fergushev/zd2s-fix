@@ -180,7 +180,9 @@ pub fn main() !void {
 
     if (std.mem.eql(u8, read_type, "char")) {
         var char_timer = try std.time.Timer.start();
+        var char_count: u32 = 0;
         while (try dir_walker.next()) |entry| {
+            char_count += 1;
             if (entry.kind == .file) {
                 @memset(out_buffer, 0);
                 var arena = std.heap.ArenaAllocator.init(std.heap.page_allocator);
@@ -249,9 +251,10 @@ pub fn main() !void {
             }
         }
         const char_time_end = char_timer.read();
-        main_log.err("Total time: {d} seconds", .{char_time_end / 1_000_000_000});
+        main_log.err("Total time: {d} seconds | Count: {d}", .{ char_time_end / 1_000_000_000, char_count });
     } else if (std.mem.eql(u8, read_type, "stash")) {
         var stash_timer = try std.time.Timer.start();
+        var stash_count: u32 = 0;
         while (try dir_walker.next()) |entry| {
             if (entry.kind == .file and std.mem.eql(u8, std.fs.path.extension(entry.basename), ".nl")) {
                 var ext_it = splitSequence(u8, entry.basename, ".");
@@ -261,6 +264,7 @@ pub fn main() !void {
                 const ext = std.meta.stringToEnum(ValidExtensions, extension) orelse continue;
                 switch (ext) {
                     .@"stash.nl", .@"stash.hc.nl" => {
+                        stash_count += 1;
                         @memset(out_buffer, 0);
 
                         var arena = std.heap.ArenaAllocator.init(std.heap.page_allocator);
@@ -324,7 +328,7 @@ pub fn main() !void {
             }
         }
         const stash_time_end = stash_timer.read();
-        main_log.err("Total time: {d} seconds", .{stash_time_end / 1_000_000_000});
+        main_log.err("Total time: {d} seconds | Count: {d}", .{ stash_time_end / 1_000_000_000, stash_count });
     }
 }
 
