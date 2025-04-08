@@ -216,9 +216,6 @@ pub fn main() !void {
                 if (!ladder) {
                     readD2S(&parser) catch |err| try {
                         main_log.err("Error: {s}. Failed to read file: {s}", .{ @errorName(err), entry.path });
-                        if (err == error.InvalidInvPage) {
-                            break;
-                        }
                         continue;
                     };
 

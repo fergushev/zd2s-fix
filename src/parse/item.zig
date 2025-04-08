@@ -67,7 +67,12 @@ fn handleItemErrors(parser: *Parser, item: *BasicItem, err: anyerror) !void {
     // );
 
     switch (err) {
-        error.BadStatOrder, error.InvalidSaveBits, error.InvalidItemLength, error.InvalidItemCode => {
+        error.BadStatOrder,
+        error.InvalidSaveBits,
+        error.InvalidItemLength,
+        error.InvalidItemCode,
+        error.InvalidInvPage,
+        => {
             item.identifier = 0;
 
             if (item.is_socket) {
@@ -218,7 +223,7 @@ fn readItem(parser: *Parser, item: *charsave.BasicItem) !void {
 
         const inv_page: u8 = try parser.readBits(u8, 3) -% @as(u8, 1);
         if (inv_page > 5 and inv_page < 255) {
-            item_log.err("Inv Page: {d}", .{inv_page});
+            // item_log.err("Inv Page: {d}", .{inv_page});
             return error.InvalidInvPage;
         }
         item.inv_page = @enumFromInt(inv_page);
