@@ -136,19 +136,23 @@ pub fn getItemDetails(parser: *Parser) !void {
             }
             last_offset = parser.offset - 16;
         } else if (!found_merc and cur_byte == 0x66 and prev_byte == 0x6A) {
-            if (!found_corpse) {
-                details.corpse_start = last_offset;
-            }
-
-            found_merc = true;
-            details.merc_start = parser.offset - 16;
             const merc_first: u8 = try parser.readBits(u8, 8);
             const merc_sec: u8 = try parser.readBits(u8, 8);
 
             if (merc_first == 0x6B and merc_sec == 0x66) {
+                found_merc = true;
+                details.merc_start = parser.offset - 32;
                 details.golem_start = parser.offset - 16;
+                if (!found_corpse) {
+                    details.corpse_start = last_offset;
+                }
                 break;
             } else if (merc_first == 0x4A and merc_sec == 0x4D) {
+                found_merc = true;
+                details.merc_start = parser.offset - 32;
+                if (!found_corpse) {
+                    details.corpse_start = last_offset;
+                }
                 if (try parser.readBits(u16, 16) == 0) {
                     details.golem_start = parser.offset;
                     break;
@@ -156,10 +160,24 @@ pub fn getItemDetails(parser: *Parser) !void {
             }
         } else if (found_merc and cur_byte == 0x66 and prev_byte == 0x6B) {
             const has_golem = try parser.readBits(u8, 8);
-            parser.offset -= 8;
             if (has_golem == 0 or has_golem == 1) {
-                details.golem_start = parser.offset - 16;
-                break;
+                // Not gonna be a JM item id if we're at the end of the file
+                if (parser.offset == parser.buffer.len * 8) {
+                    parser.offset -= 8;
+                    details.golem_start = parser.offset - 16;
+                    break;
+                }
+
+                const golem_identifier: u16 = try parser.readBits(u16, 16);
+                parser.offset -= 24;
+                if (golem_identifier == @intFromEnum(SaveIdentifiers.items) or
+                    golem_identifier == 0x6470)
+                {
+                    details.golem_start = parser.offset - 16;
+                    break;
+                }
+            } else {
+                parser.offset -= 8;
             }
         }
     }
@@ -279,7 +297,7 @@ pub fn getItemDetails(parser: *Parser) !void {
         details.merc_size.items[m_index - 1].length = details.golem_start - details.merc_size.items[m_index - 1].start_offset;
     }
 
-    if (details.golem_items > 1) {
+    if (details.golem_items != 0) {
         const golem_fin: usize = if (has_pd) pd_offset else (parser.buffer.len * 8);
         details.golem_size.items[g_index - 1].length = golem_fin - details.golem_size.items[g_index - 1].start_offset;
     }
