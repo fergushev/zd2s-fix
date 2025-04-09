@@ -245,7 +245,7 @@ pub fn main() !void {
                         try char_file.setEndPos(size);
                         defer char_file.close();
                     } else {
-                        main_log.err("Broken items={d}, File:={s}", .{ parser.item_details.removed_items, entry.path });
+                        main_log.err("Broken items={d}, File={s}", .{ parser.item_details.removed_items, entry.path });
                     }
                 }
             }

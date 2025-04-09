@@ -528,6 +528,7 @@ pub const BasicItem = struct {
     durability: u32,
     max_durability: u32,
     quantity: u32,
+    quest: u32,
 
     socketed_items: []BasicItem,
     parent_item: ?*BasicItem,

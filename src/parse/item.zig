@@ -336,7 +336,7 @@ fn readItemsCompact(parser: *Parser, item: *charsave.BasicItem) !void {
 
     if (version > 92) {
         if (quest > 0 and quest_diff_check == 1) {
-            _ = try parser.readBits(u32, parser.isc_list.items[@intFromEnum(ItemStats.questitemdifficulty)].save_bits);
+            item.quest = try parser.readBits(u32, parser.isc_list.items[@intFromEnum(ItemStats.questitemdifficulty)].save_bits);
         }
     }
 
@@ -790,7 +790,7 @@ fn writeItemsCompact(parser: *Parser, item: *charsave.BasicItem) !void {
 
     if (version > 92) {
         if (quest > 0 and quest_diff_check == 1) {
-            _ = try parser.readBits(u32, parser.isc_list.items[@intFromEnum(ItemStats.questitemdifficulty)].save_bits);
+            parser.writeBits(32, item.quest);
         }
     }
 
