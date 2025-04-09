@@ -179,7 +179,7 @@ pub fn readItemList(parser: *Parser, items: *[]BasicItem) !void {
                     item_log.debug("SOCKET: {d} of {d}, OFFSET: 0x{x}", .{ s + 1, item.sockets, parser.offset / 8 });
                 }
 
-                if (details.current_index > size_info.items.len) {
+                if (details.current_index >= size_info.items.len) {
                     return error.SizeInfoOutOfBounds;
                 }
                 details.current_limit = size_info.items[details.current_index].end_offset;
