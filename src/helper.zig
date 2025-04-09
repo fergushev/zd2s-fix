@@ -11,6 +11,7 @@ const Parser = main.d2parser.D2SParser;
 const StartOffset = main.d2parser.StartOffset;
 const ItemOffsetDetails = main.d2parser.ItemOffsetDetails;
 const charsave = main.charsave;
+const ItemFlags = main.charsave.ItemFlags;
 
 pub fn loadCharSave(allocator: std.mem.Allocator, dir: Dir, save_path: []const u8) ![]u8 {
     const char_file = try dir.openFile(save_path, .{});
@@ -80,6 +81,24 @@ pub fn calcChecksum(buffer: []u8, size: u32) !u32 {
     }
 
     return @as(u32, @bitCast(checksum));
+}
+
+/// Compact Items _have_ to be at least 13 bytes in order to be valid
+/// and extended items have to be at least 21 bytes.
+/// If we find one that's smaller, it's just a JM word that _happened_ to be inside of a "valid" item.
+fn getMinItemSize(parser: *Parser) !usize {
+    const before_offset: usize = parser.offset;
+
+    var min_bits: usize = 0;
+    const flags: ItemFlags = @bitCast(try parser.readBits(u32, 32));
+    parser.offset = before_offset;
+
+    if (flags.compact) {
+        min_bits = 104;
+    } else {
+        min_bits = 168;
+    }
+    return min_bits;
 }
 
 /// Assumes an expansion character file is in the buffer. Classic is more than likely broken here
@@ -164,6 +183,7 @@ pub fn getItemDetails(parser: *Parser) !void {
     var has_pd: bool = false;
     var pd_offset: usize = 0;
     var too_small_items: usize = 0;
+    var cur_min_length: usize = 0;
 
     // Second pass: get item counts and offsets
     while (parser.offset < file_bitsize) {
@@ -174,13 +194,12 @@ pub fn getItemDetails(parser: *Parser) !void {
             if (parser.offset - 16 == details.corpse_start or parser.offset - 32 == details.merc_start) {
                 continue;
             }
-            // Items _have_ to be at least 13 bytes in order to be valid.
-            // If we find one that's smaller, it's just a JM word that _happened_
-            // to be inside of a "valid" item.
-            if (parser.offset - last_offset < 104) {
+            if (parser.offset - last_offset < cur_min_length) {
                 too_small_items += 1;
                 continue;
             }
+
+            cur_min_length = try getMinItemSize(parser);
 
             if (parser.offset < details.corpse_start) {
                 details.player_items += 1;
@@ -317,6 +336,7 @@ pub fn getStashItemDetails(parser: *Parser) !void {
     const details = parser.item_details;
 
     var too_small_items: usize = 0;
+    var cur_min_length: usize = 0;
     var index: u16 = 0;
     while (parser.offset < file_bitsize) {
         prev_byte = cur_byte;
@@ -327,13 +347,12 @@ pub fn getStashItemDetails(parser: *Parser) !void {
                 // Ignore the header
                 continue;
             }
-            // Items _have_ to be at least 13 bytes in order to be valid.
-            // If we find one that's smaller, it's just a JM word that _happened_
-            // to be inside of a "valid" item.
-            if (parser.offset - last_offset < 104) {
+            if (parser.offset - last_offset < cur_min_length) {
                 too_small_items += 1;
                 continue;
             }
+
+            cur_min_length = try getMinItemSize(parser);
 
             details.stash_items += 1;
             try details.stash_size.append(.{

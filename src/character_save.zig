@@ -421,7 +421,7 @@ pub const StashItems = struct {
     item: []BasicItem,
 };
 
-const ItemFlags = packed struct(u32) {
+pub const ItemFlags = packed struct(u32) {
     new_item: bool,
     target: bool,
     targeting: bool,
