@@ -50,7 +50,7 @@ fn handleItemErrors(parser: *Parser, item: *BasicItem, err: anyerror) !void {
         .corpse => details.corpse_size,
         .mercenary => details.merc_size,
         .stash => details.stash_size,
-        else => details.stash_size,
+        .golem => details.golem_size,
     };
 
     // item_log.err(

@@ -135,9 +135,13 @@ pub fn getItemDetails(parser: *Parser) !void {
                     break;
                 }
             }
-        } else if (cur_byte == 0x66 and prev_byte == 0x6B) {
-            details.golem_start = parser.offset - 16;
-            break;
+        } else if (found_merc and cur_byte == 0x66 and prev_byte == 0x6B) {
+            const has_golem = try parser.readBits(u8, 8);
+            parser.offset -= 8;
+            if (has_golem == 0 or has_golem == 1) {
+                details.golem_start = parser.offset - 16;
+                break;
+            }
         }
     }
 
@@ -155,6 +159,11 @@ pub fn getItemDetails(parser: *Parser) !void {
     var p_index: u16 = 0;
     var c_index: u16 = 0;
     var m_index: u16 = 0;
+    var g_index: u16 = 0;
+
+    var has_pd: bool = false;
+    var pd_offset: usize = 0;
+    var too_small_items: usize = 0;
 
     // Second pass: get item counts and offsets
     while (parser.offset < file_bitsize) {
@@ -162,10 +171,14 @@ pub fn getItemDetails(parser: *Parser) !void {
         cur_byte = try parser.readBits(u8, 8);
 
         if (cur_byte == 0x4D and prev_byte == 0x4A) {
-            if (parser.offset - 16 == details.corpse_start or
-                parser.offset - 32 == details.merc_start or
-                parser.offset - 40 == details.golem_start)
-            {
+            if (parser.offset - 16 == details.corpse_start or parser.offset - 32 == details.merc_start) {
+                continue;
+            }
+            // Items _have_ to be at least 13 bytes in order to be valid.
+            // If we find one that's smaller, it's just a JM word that _happened_
+            // to be inside of a "valid" item.
+            if (parser.offset - last_offset < 104) {
+                too_small_items += 1;
                 continue;
             }
 
@@ -220,12 +233,21 @@ pub fn getItemDetails(parser: *Parser) !void {
                     .length = 0,
                     .end_offset = 0,
                 });
+
+                if (details.golem_items > 1) {
+                    details.golem_size.items[g_index - 1].length = parser.offset - 16 - last_offset;
+                }
+                g_index += 1;
             }
 
             last_offset = parser.offset - 16;
+        } else if (cur_byte == 0x64 and prev_byte == 0x70 and parser.offset > details.golem_start) { // 'pd'
+            has_pd = true;
+            pd_offset = parser.offset - 16;
         }
     }
 
+    var total_length: usize = 0;
     if (details.player_items != 0) {
         details.player_size.items[p_index - 1].length = details.corpse_start - details.player_size.items[p_index - 1].start_offset;
     }
@@ -238,7 +260,11 @@ pub fn getItemDetails(parser: *Parser) !void {
         details.merc_size.items[m_index - 1].length = details.golem_start - details.merc_size.items[m_index - 1].start_offset;
     }
 
-    var total_length: usize = 0;
+    if (details.golem_items > 1) {
+        const golem_fin: usize = if (has_pd) pd_offset else (parser.buffer.len * 8);
+        details.golem_size.items[g_index - 1].length = golem_fin - details.golem_size.items[g_index - 1].start_offset;
+    }
+
     for (details.player_size.items) |*item| {
         total_length += item.length;
         item.end_offset = item.start_offset + item.length;
@@ -251,6 +277,10 @@ pub fn getItemDetails(parser: *Parser) !void {
         total_length += item.length;
         item.end_offset = item.start_offset + item.length;
     }
+    for (details.golem_size.items) |*item| {
+        total_length += item.length;
+        item.end_offset = item.start_offset + item.length;
+    }
 
     const p_count: i16 = details.player_items + 1;
     const c_count: i16 = if (found_corpse) details.corpse_items + 2 else 1;
@@ -259,9 +289,10 @@ pub fn getItemDetails(parser: *Parser) !void {
     const total_items = p_count + c_count + m_count + g_count;
 
     // Only look at the "item" sections, just in case there's a "JM" hiding somewhere else in the file
-    const end_offset: usize = if (details.golem_items != 0) details.golem_start + 40 else details.golem_start;
+    const end_offset: usize = if (has_pd) pd_offset else (parser.buffer.len * 8);
     const sliced_buf = parser.buffer[start_offset / 8 .. end_offset / 8];
-    const item_count = std.mem.count(u8, sliced_buf, "JM");
+    var item_count = std.mem.count(u8, sliced_buf, "JM");
+    item_count -= too_small_items;
     if (item_count != total_items) {
         return error.MissingItems;
     }
@@ -285,6 +316,7 @@ pub fn getStashItemDetails(parser: *Parser) !void {
     const file_bitsize = parser.buffer.len * 8;
     const details = parser.item_details;
 
+    var too_small_items: usize = 0;
     var index: u16 = 0;
     while (parser.offset < file_bitsize) {
         prev_byte = cur_byte;
@@ -295,6 +327,14 @@ pub fn getStashItemDetails(parser: *Parser) !void {
                 // Ignore the header
                 continue;
             }
+            // Items _have_ to be at least 13 bytes in order to be valid.
+            // If we find one that's smaller, it's just a JM word that _happened_
+            // to be inside of a "valid" item.
+            if (parser.offset - last_offset < 104) {
+                too_small_items += 1;
+                continue;
+            }
+
             details.stash_items += 1;
             try details.stash_size.append(.{
                 .start_offset = parser.offset - 16,
@@ -317,7 +357,8 @@ pub fn getStashItemDetails(parser: *Parser) !void {
         item.end_offset = item.start_offset + item.length;
     }
 
-    const item_count = std.mem.count(u8, parser.buffer, "JM");
+    var item_count = std.mem.count(u8, parser.buffer, "JM");
+    item_count -= too_small_items;
     if (item_count != details.stash_items) {
         return error.MissingItems;
     }
