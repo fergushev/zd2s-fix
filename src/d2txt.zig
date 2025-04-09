@@ -235,7 +235,13 @@ pub fn getWamTxt(allocator: std.mem.Allocator) !*std.ArrayList(WamTxt) {
             const stackable = try fieldToBool(row.data().get("stackable") orelse return error.MissingStackable);
 
             const quest = try fieldToInt(u8, row.data().get("quest") orelse return error.MissingQuest, 10);
-            const questdiffcheck = try fieldToInt(u8, row.data().get("quest") orelse return error.MissingQuestDiffCheck, 10);
+            var questdiffcheck: ?u8 = undefined;
+
+            if (@intFromPtr(parser) == @intFromPtr(&wam_parsers[1])) {
+                questdiffcheck = null;
+            } else {
+                questdiffcheck = try fieldToInt(u8, row.data().get("questdiffcheck") orelse return error.MissingQuestDiffCheck, 10);
+            }
 
             if (std.mem.eql(u8, fieldToStr(name).?.str, "Expansion") and
                 fieldToStr(wam_type) == null)
