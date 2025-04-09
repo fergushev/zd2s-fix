@@ -206,7 +206,7 @@ pub fn main() !void {
                             continue;
                         },
                         else => {
-                            main_log.err("Error: {s}. Invalid file: {s}", .{ @errorName(err), entry.path });
+                            main_log.err("Error={s}. Invalid file={s}", .{ @errorName(err), entry.path });
                             continue;
                         },
                     }
@@ -215,7 +215,7 @@ pub fn main() !void {
                 const ladder: bool = try isLadderChar(&parser);
                 if (!ladder) {
                     readD2S(&parser) catch |err| try {
-                        main_log.err("Error: {s}. Failed to read file: {s}", .{ @errorName(err), entry.path });
+                        main_log.err("Error={s}. Failed to read file={s}", .{ @errorName(err), entry.path });
                         continue;
                     };
 
@@ -225,13 +225,13 @@ pub fn main() !void {
                     }
 
                     const new_checksum: u32 = writeD2S(&parser) catch |err| try {
-                        main_log.err("Error: {s}. Failed to write file: {s}", .{ @errorName(err), entry.path });
+                        main_log.err("Error={s}. Failed to write file={s}", .{ @errorName(err), entry.path });
                         continue;
                     };
 
                     if (try checksumsMatch(orig_checksum, new_checksum)) {
                         main_log.err(
-                            "Checksums match but file has changed. Bad Items: {d}, File: {s}",
+                            "Checksums match but file has changed. Bad Items={d}, File={s}",
                             .{ parser.item_details.removed_items, entry.path },
                         );
                         continue;
@@ -245,7 +245,7 @@ pub fn main() !void {
                         try char_file.setEndPos(size);
                         defer char_file.close();
                     } else {
-                        main_log.err("Broken items: {d}: File: {s}", .{ parser.item_details.removed_items, entry.path });
+                        main_log.err("Broken items={d}, File:={s}", .{ parser.item_details.removed_items, entry.path });
                     }
                 }
             }
@@ -288,14 +288,14 @@ pub fn main() !void {
                                     continue;
                                 },
                                 else => {
-                                    main_log.err("Error: {s}. Invalid file: {s}", .{ @errorName(err), entry.path });
+                                    main_log.err("Error={s}. Invalid file={s}", .{ @errorName(err), entry.path });
                                     continue;
                                 },
                             }
                         };
 
                         readStash(&parser) catch |err| try {
-                            main_log.err("Error: {s}. Failed to read file: {s}", .{ @errorName(err), entry.path });
+                            main_log.err("Error={s}. Failed to read file={s}", .{ @errorName(err), entry.path });
                             continue;
                         };
 
@@ -305,7 +305,7 @@ pub fn main() !void {
                         }
 
                         writeStash(&parser) catch |err| try {
-                            main_log.err("Error: {s}. Failed to write file: {s}", .{ @errorName(err), entry.path });
+                            main_log.err("Error={s}. Failed to write file={s}", .{ @errorName(err), entry.path });
                             continue;
                         };
 
@@ -317,11 +317,11 @@ pub fn main() !void {
                             try stash_file.setEndPos(size);
                             defer stash_file.close();
                         } else {
-                            main_log.err("Broken items: {d}: File: {s}", .{ parser.item_details.removed_items, entry.path });
+                            main_log.err("Broken items={d}, File={s}", .{ parser.item_details.removed_items, entry.path });
                         }
                     },
                     else => {
-                        main_log.err("Ladder Stash. File: {s}", .{entry.path});
+                        main_log.err("Ladder Stash. File={s}", .{entry.path});
                         continue;
                     },
                 }

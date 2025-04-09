@@ -51,7 +51,7 @@ pub fn findAllEquivalentTypes(itype: []u8, all_types: *std.StringHashMap(bool), 
 
 pub fn verifyIdentifier(actual: anytype, expected: SaveIdentifiers) !void {
     if (actual != @intFromEnum(expected)) {
-        helper_log.err("Invalid Identifier: 0x{x}", .{actual});
+        helper_log.debug("Invalid Identifier: 0x{x}", .{actual});
         return error.InvalidIdentifier;
     }
 }
