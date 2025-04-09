@@ -68,14 +68,9 @@ fn handleItemErrors(parser: *Parser, item: *BasicItem, err: anyerror) !void {
 
     switch (err) {
         error.BadStatOrder,
-        error.BadStatIndex,
         error.InvalidSaveBits,
         error.InvalidItemLength,
-        error.InvalidItemCode,
-        error.InvalidInvPage,
-        error.InvalidAnimationMode,
-        error.InvalidEquipped,
-        error.InvalidClass,
+        error.TooSmallItem,
         => {
             item.identifier = 0;
 
@@ -96,6 +91,16 @@ fn handleItemErrors(parser: *Parser, item: *BasicItem, err: anyerror) !void {
             parser.offset = size_info.items[details.current_index].end_offset;
 
             return;
+        },
+        error.InvalidItemCode,
+        error.InvalidInvPage,
+        error.InvalidAnimationMode,
+        error.InvalidEquipped,
+        error.InvalidClass,
+        error.BadStatIndex,
+        => {
+            // Currently unclear if these are fixable issues or not
+            return err;
         },
         error.InvalidIdentifier => {
             // with the item bound checks this may not be possible anymore
@@ -273,6 +278,10 @@ fn readItem(parser: *Parser, item: *charsave.BasicItem) !void {
         try readItemsExtended(parser, item);
     }
     parser.alignToByte();
+
+    if (parser.item_details.current_limit != parser.offset) {
+        return error.TooSmallItem;
+    }
 }
 
 fn readItemsCompact(parser: *Parser, item: *charsave.BasicItem) !void {
