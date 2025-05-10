@@ -350,6 +350,7 @@ pub const D2SParser = struct {
 
     pub fn readBits(self: *Self, comptime T: type, bit_count: usize) !T {
         if (self.item_details.current_limit != 0 and self.offset >= self.item_details.current_limit) {
+            // print("LIMIT: {x} | \n", .{self.item_details.current_limit / 8});
             return error.InvalidItemLength;
         }
 
@@ -361,6 +362,7 @@ pub const D2SParser = struct {
     pub fn readByteArray(self: *Self, input: []u8) !void {
         for (0..input.len) |i| {
             if (self.item_details.current_limit != 0 and self.offset >= self.item_details.current_limit) {
+                // print("LIMIT []: {x} | \n", .{self.item_details.current_limit / 8});
                 return error.InvalidItemLength;
             }
 

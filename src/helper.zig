@@ -203,15 +203,32 @@ pub fn getItemDetails(parser: *Parser) !void {
     var too_small_items: usize = 0;
     var cur_min_length: usize = 0;
 
+    // print("corpse start: {x}\n", .{details.corpse_start / 8});
+    // print("merc start: {x}\n", .{details.merc_start / 8});
+    // print("golem start: {x}\n", .{details.golem_start / 8});
+
     // Second pass: get item counts and offsets
     while (parser.offset < file_bitsize) {
         prev_byte = cur_byte;
         cur_byte = try parser.readBits(u8, 8);
 
         if (cur_byte == 0x4D and prev_byte == 0x4A) {
-            if (parser.offset - 16 == details.corpse_start or parser.offset - 32 == details.merc_start) {
+            if (parser.offset - 16 == details.corpse_start or
+                parser.offset - 144 == details.corpse_start or
+                parser.offset - 32 == details.merc_start)
+            {
                 continue;
             }
+
+            const item_flags: ItemFlags = @bitCast(try parser.readBits(u32, 32));
+            parser.offset -= 32;
+            if (item_flags._unused != 0 or item_flags.deleted or item_flags.switch_in or item_flags.switch_out) {
+                // Found a JM header that isn't actually the start of an item
+                too_small_items += 1;
+                continue;
+            }
+
+            // May not be necessary, above should probably already handle this
             if (parser.offset - last_offset < cur_min_length) {
                 too_small_items += 1;
                 continue;
