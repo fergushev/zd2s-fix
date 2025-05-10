@@ -227,17 +227,23 @@ pub fn getItemDetails(parser: *Parser) !void {
 
             const item_flags: ItemFlags = @bitCast(try parser.readBits(u32, 32));
             parser.offset -= 32;
-            if (item_flags._unused != 0 or item_flags.deleted or item_flags.switch_in or item_flags.switch_out) {
+            if (item_flags._unused != 0 or
+                item_flags.deleted or
+                (item_flags.ear and (item_flags.ethereal or item_flags.runeword or item_flags.inferior)) or
+                (item_flags.named and !item_flags.ear) or
+                (item_flags.compact and (item_flags.ethereal or item_flags.runeword)) or
+                (item_flags.starter and (item_flags.ethereal or item_flags.ear or item_flags.runeword)))
+            {
                 // Found a JM header that isn't actually the start of an item
                 too_small_items += 1;
-                // print("TOO SMALL (flags): {x}\n", .{parser.offset / 8});
+                // print("TOO SMALL (flags): {x} | \n{any}\n", .{ (parser.offset - 16) / 8, item_flags });
                 continue;
             }
 
             // May not be necessary, above should probably already handle this
             if (parser.offset - last_offset < cur_min_length) {
                 too_small_items += 1;
-                // print("TOO SMALL: {x}\n", .{parser.offset / 8});
+                // print("TOO SMALL: {x}\n", .{(parser.offset - 16) / 8});
                 continue;
             }
 
