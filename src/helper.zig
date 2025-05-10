@@ -189,6 +189,11 @@ pub fn getItemDetails(parser: *Parser) !void {
     }
     parser.offset = details.player_start + 16;
 
+    var has_corpse: bool = false;
+    if (details.merc_start - details.corpse_start > 32) {
+        has_corpse = true;
+    }
+
     cur_byte = 0;
     prev_byte = 0;
     last_offset = 0;
@@ -214,7 +219,7 @@ pub fn getItemDetails(parser: *Parser) !void {
 
         if (cur_byte == 0x4D and prev_byte == 0x4A) {
             if (parser.offset - 16 == details.corpse_start or
-                parser.offset - 144 == details.corpse_start or
+                (parser.offset - 144 == details.corpse_start and has_corpse) or
                 parser.offset - 32 == details.merc_start)
             {
                 continue;
@@ -225,12 +230,14 @@ pub fn getItemDetails(parser: *Parser) !void {
             if (item_flags._unused != 0 or item_flags.deleted or item_flags.switch_in or item_flags.switch_out) {
                 // Found a JM header that isn't actually the start of an item
                 too_small_items += 1;
+                // print("TOO SMALL (flags): {x}\n", .{parser.offset / 8});
                 continue;
             }
 
             // May not be necessary, above should probably already handle this
             if (parser.offset - last_offset < cur_min_length) {
                 too_small_items += 1;
+                // print("TOO SMALL: {x}\n", .{parser.offset / 8});
                 continue;
             }
 
@@ -298,6 +305,7 @@ pub fn getItemDetails(parser: *Parser) !void {
         } else if (cur_byte == 0x64 and prev_byte == 0x70 and parser.offset > details.golem_start) { // 'pd'
             has_pd = true;
             pd_offset = parser.offset - 16;
+            break;
         }
     }
 
@@ -341,6 +349,10 @@ pub fn getItemDetails(parser: *Parser) !void {
     const m_count: i16 = if (merc.experience == 0 and merc.seed == 0) 0 else details.merc_items + 1;
     const g_count: i16 = details.golem_items;
     const total_items = p_count + c_count + m_count + g_count;
+    // print(
+    //     "p_count: {d} | c_count: {d} | m_count: {d} | g_count: {d}, has_pd: {any}\n",
+    //     .{ p_count, c_count, m_count, g_count, has_pd },
+    // );
 
     // Only look at the "item" sections, just in case there's a "JM" hiding somewhere else in the file
     const end_offset: usize = if (has_pd) pd_offset else (parser.buffer.len * 8);
@@ -348,6 +360,10 @@ pub fn getItemDetails(parser: *Parser) !void {
     var item_count = std.mem.count(u8, sliced_buf, "JM");
     item_count -= too_small_items;
     if (item_count != total_items) {
+        // print(
+        //     "COUNT: {d} | TOTAL: {d} | SMALL: {d}\n",
+        //     .{ item_count, total_items, too_small_items },
+        // );
         return error.MissingItems;
     }
 
