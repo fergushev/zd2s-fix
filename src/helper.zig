@@ -229,10 +229,13 @@ pub fn getItemDetails(parser: *Parser) !void {
             parser.offset -= 32;
             if (item_flags._unused != 0 or
                 item_flags.deleted or
-                (item_flags.ear and (item_flags.ethereal or item_flags.runeword or item_flags.inferior)) or
+                (item_flags.runeword and !item_flags.socketed) or
+                (item_flags.ear and (item_flags.ethereal or item_flags.runeword or item_flags.inferior or item_flags.quantity or item_flags.broken or item_flags.repaired)) or
                 (item_flags.named and !item_flags.ear) or
                 (item_flags.compact and (item_flags.ethereal or item_flags.runeword)) or
-                (item_flags.starter and (item_flags.ethereal or item_flags.ear or item_flags.runeword)))
+                (item_flags.starter and (item_flags.ethereal or item_flags.ear or item_flags.runeword)) or
+                (item_flags.broken and item_flags.repaired) or
+                (item_flags.switch_in and item_flags.switch_out))
             {
                 // Found a JM header that isn't actually the start of an item
                 too_small_items += 1;
