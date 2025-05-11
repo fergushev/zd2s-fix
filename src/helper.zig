@@ -232,7 +232,7 @@ pub fn getItemDetails(parser: *Parser) !void {
                 (item_flags.runeword and !item_flags.socketed) or
                 (item_flags.ear and (item_flags.ethereal or item_flags.runeword or item_flags.inferior or item_flags.quantity or item_flags.broken or item_flags.repaired)) or
                 (item_flags.named and !item_flags.ear) or
-                (item_flags.compact and (item_flags.ethereal or item_flags.runeword or item_flags.starter)) or
+                (item_flags.compact and (item_flags.ethereal or item_flags.runeword)) or
                 (item_flags.starter and (item_flags.ethereal or item_flags.ear or item_flags.runeword or item_flags.quantity or item_flags.init or item_flags.new_item or item_flags.unknown1 or item_flags.unknown2 or item_flags.unknown3)) or
                 (item_flags.broken and item_flags.repaired) or
                 (item_flags.switch_in and item_flags.switch_out))
