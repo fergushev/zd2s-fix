@@ -240,6 +240,7 @@ pub fn main() !void {
 
                     if (read_only == 0) {
                         const char_file = try entry.dir.openFile(entry.basename, .{ .mode = .read_write });
+                        main_log.err("Broken items={d}, File={s}", .{ parser.item_details.removed_items, entry.path });
 
                         const size: u32 = @as(u32, @intCast(parser.out_offset)) / 8;
                         try char_file.writeAll(parser.out_buffer[0..size]);
@@ -311,7 +312,8 @@ pub fn main() !void {
                         };
 
                         if (read_only == 0) {
-                            const stash_file = try entry.dir.openFile(entry.path, .{ .mode = .read_write });
+                            const stash_file = try entry.dir.openFile(entry.basename, .{ .mode = .read_write });
+                            main_log.err("Broken items={d}, File={s}, Path={s}", .{ parser.item_details.removed_items, entry.path, entry.basename });
 
                             const size: u32 = @as(u32, @intCast(parser.out_offset)) / 8;
                             try stash_file.writeAll(parser.out_buffer[0..size]);
