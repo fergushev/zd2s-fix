@@ -353,6 +353,9 @@ pub const D2SParser = struct {
             // print("LIMIT: {x} | \n", .{self.item_details.current_limit / 8});
             return error.InvalidItemLength;
         }
+        if (self.offset + bit_count > self.buffer.len * 8) {
+            return error.NotEnoughBuffers;
+        }
 
         const output: T = std.mem.readVarPackedInt(T, self.buffer, self.offset, bit_count, .little, .unsigned);
         self.offset += bit_count;
@@ -364,6 +367,9 @@ pub const D2SParser = struct {
             if (self.item_details.current_limit != 0 and self.offset >= self.item_details.current_limit) {
                 // print("LIMIT []: {x} | \n", .{self.item_details.current_limit / 8});
                 return error.InvalidItemLength;
+            }
+            if (self.offset + 8 > self.buffer.len * 8) {
+                return error.NotEnoughBuffers;
             }
 
             input[i] = std.mem.readPackedInt(u8, self.buffer, self.offset, .little);

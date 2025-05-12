@@ -490,6 +490,7 @@ pub const InventoryPage = enum(u8) {
     cube,
     stash,
     stash_page,
+    invalid,
     null = 255, // equipped items, socketed items, belt pots
 };
 

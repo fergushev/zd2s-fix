@@ -213,7 +213,8 @@ pub fn main() !void {
                 };
 
                 const ladder: bool = try isLadderChar(&parser);
-                if (ladder) {
+                const dead: bool = try isDeadHardcoreChar(&parser);
+                if (!ladder and !dead) {
                     readD2S(&parser) catch |err| try {
                         main_log.err("Error={s}. Failed to read file={s}", .{ @errorName(err), entry.path });
                         continue;
@@ -372,6 +373,14 @@ fn isLadderChar(parser: *Parser) !bool {
     parser.offset = 0;
 
     return save_flags.ladder;
+}
+
+fn isDeadHardcoreChar(parser: *Parser) !bool {
+    parser.offset = 288;
+    const save_flags: SaveFlags = @bitCast(try parser.readBits(u32, 32));
+    parser.offset = 0;
+
+    return save_flags.hardcore and save_flags.dead;
 }
 
 fn checksumsMatch(before: u32, after: u32) !bool {
