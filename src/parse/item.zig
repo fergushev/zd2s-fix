@@ -124,6 +124,7 @@ fn handleItemErrors(parser: *Parser, item: *BasicItem, err: anyerror) !void {
             const parent = item.parent_item orelse return error.MissingParentItem;
             parent.sockets = item.sock_index;
             parent.bad_socket = true;
+            details.removed_items += 1;
             return;
         },
         else => {
