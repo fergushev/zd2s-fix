@@ -72,6 +72,8 @@ fn handleItemErrors(parser: *Parser, item: *BasicItem, err: anyerror) !void {
         error.InvalidItemLength,
         error.TooSmallItem,
         error.InvalidPlayerStashItem,
+        error.EquippedInventoryItem,
+        error.InvalidSocket,
         => {
             item.identifier = 0;
 
@@ -112,7 +114,7 @@ fn handleItemErrors(parser: *Parser, item: *BasicItem, err: anyerror) !void {
             // Not worth trying to "recover", as the problem is most likely _not_ the char file
             return err;
         },
-        error.InvalidSocket => {
+        error.InvalidSocketOld => {
             // This means the item is (at least potentially) a good item but the parent item had
             // an invalid # of sockets, so a non-socket item was read as a socket.
             // After breaking out of the socket loop we need to be in the same start offset as before
@@ -174,6 +176,7 @@ pub fn readItemList(parser: *Parser, items: *[]BasicItem) !void {
 
             for (item.socketed_items, 0..) |*sock_item, s| {
                 if (item.bad_socket or parser.offset == item.section_end_offset) {
+                    item.sockets = @as(u8, @intCast(s)) - 1;
                     break;
                 }
 
@@ -254,6 +257,14 @@ fn readItem(parser: *Parser, item: *charsave.BasicItem) !void {
             return error.InvalidInvPage;
         }
         item.inv_page = @enumFromInt(inv_page);
+
+        if (item.item_source == .player and item.inv_page == .inventory and item.equipped != .unequipped) {
+            return error.EquippedInventoryItem;
+        }
+
+        if (item.animation_mode == .socketed and item.inv_page == .null and item.equipped != .unequipped) {
+            return error.InvalidSocket;
+        }
 
         if (item.item_source == .player and item.inv_page == .stash_page and equipped > 0) {
             return error.InvalidPlayerStashItem;
@@ -530,8 +541,8 @@ fn readItemsExtended(parser: *Parser, item: *charsave.BasicItem) !void {
             .{ item_code, item_type, @tagName(item.quality), is_armor, is_weapon },
         );
         item_log.debug(
-            " Socketed: {any}, Sockets: {d}",
-            .{ item.flags.socketed, item.sockets },
+            " Socketed: {any}, Sockets: {d}, Max Sockets: {d}",
+            .{ item.flags.socketed, item.sockets, item.max_sockets },
         );
     }
 
