@@ -175,7 +175,9 @@ pub fn readItemList(parser: *Parser, items: *[]BasicItem) !void {
 
             for (item.socketed_items, 0..) |*sock_item, s| {
                 if (item.bad_socket or parser.offset == item.section_end_offset) {
-                    item.sockets = @as(u8, @intCast(s)) - 1;
+                    // This seems to have the potential to remove valid sockets in addition to invalid ones
+                    // Should only use this if the rest of the item removal code doesn't fix the character
+                    // item.sockets = @as(u8, @intCast(s)) - 1;
                     break;
                 }
 
