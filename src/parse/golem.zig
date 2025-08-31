@@ -29,7 +29,7 @@ pub fn readGolemItems(parser: *Parser) !void {
     }
     golem.has_golem = @as(u1, @intCast(has_golem));
     if (main.log_golem) {
-        golem_log.debug("HAS GOLEM: {any}", .{@as(bool, @bitCast(golem.has_golem))});
+        golem_log.debug("HAS GOLEM: {any}", .{golem.has_golem});
     }
 
     if (golem.has_golem == 1) {

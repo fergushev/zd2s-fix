@@ -214,7 +214,7 @@ pub fn main() !void {
 
                 const ladder: bool = try isLadderChar(&parser);
                 const dead: bool = try isDeadHardcoreChar(&parser);
-                if (!ladder and !dead) {
+                if (ladder and !dead) {
                     readD2S(&parser) catch |err| try {
                         main_log.err("Error={s}. Failed to read file={s}", .{ @errorName(err), entry.path });
                         continue;

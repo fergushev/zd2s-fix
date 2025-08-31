@@ -71,6 +71,7 @@ fn handleItemErrors(parser: *Parser, item: *BasicItem, err: anyerror) !void {
         error.InvalidSaveBits,
         error.InvalidItemLength,
         error.TooSmallItem,
+        error.InvalidPlayerStashItem,
         => {
             item.identifier = 0;
 
@@ -252,6 +253,10 @@ fn readItem(parser: *Parser, item: *charsave.BasicItem) !void {
             return error.InvalidInvPage;
         }
         item.inv_page = @enumFromInt(inv_page);
+
+        if (item.item_source == .player and item.inv_page == .stash_page and equipped > 0) {
+            return error.InvalidPlayerStashItem;
+        }
 
         if (item.is_socket and item.inv_page != .null and item.animation_mode != .socketed) {
             return error.InvalidSocket;
