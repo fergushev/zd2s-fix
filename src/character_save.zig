@@ -38,6 +38,7 @@ pub const SaveHeader = struct {
 
 pub const SaveIdentifiers = enum(u32) {
     save = 0xAA55AA55,
+    stash = 0xBB55BB55,
     quest = 0x216f6f57, // Woo!
     waypoint = 0x5357, // WS
     npc = 0x7701,

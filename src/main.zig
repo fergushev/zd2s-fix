@@ -149,7 +149,7 @@ pub fn main() !void {
     const expected_args: usize = 4;
     if (args.len != expected_args) {
         main_log.err("Too few args passed. Expected {d}, got {d}", .{ expected_args, args.len });
-        main_log.err("Required positional args: read_only(0|1) file_type(char|stash) absolute_dir_path(path string)", .{});
+        main_log.err("Required positional args: read_only(0|1) file_type(char|stash|accountstats) absolute_dir_path(path string)", .{});
         return;
     }
 
@@ -160,7 +160,9 @@ pub fn main() !void {
     }
 
     const read_type = args[2];
-    const valid_type = (std.mem.eql(u8, read_type, "char") or std.mem.eql(u8, read_type, "stash"));
+    const valid_type = (std.mem.eql(u8, read_type, "char") or
+        std.mem.eql(u8, read_type, "stash") or
+        std.mem.eql(u8, read_type, "accountstats"));
     if (!valid_type) {
         main_log.err("file_type value was invalid. Expected char or stash, got {s}", .{read_type});
         return;
@@ -332,6 +334,314 @@ pub fn main() !void {
         }
         const stash_time_end = stash_timer.read();
         main_log.err("Total time: {d} seconds | Count: {d}", .{ stash_time_end / 1_000_000_000, stash_count });
+    } else if (std.mem.eql(u8, read_type, "accountstats")) {
+        var stats_timer = try std.time.Timer.start();
+        var stats_count: u32 = 0;
+
+        // hc stats
+        var played_seconds_hc: u64 = 0;
+        var monster_kills_hc: u64 = 0;
+
+        var dclone_hc: u64 = 0;
+        var dclonet2_hc: u64 = 0;
+        var rathma_hc: u64 = 0;
+        var rathmat2_hc: u64 = 0;
+        var lucion_hc: u64 = 0;
+        var luciont2_hc: u64 = 0;
+
+        var trist_hc: u64 = 0;
+        var ancients_hc: u64 = 0;
+
+        var andariel_hc: u64 = 0;
+        var duriel_hc: u64 = 0;
+        var mephisto_hc: u64 = 0;
+        var diablo_hc: u64 = 0;
+        var baal_hc: u64 = 0;
+
+        var deaths_hc: u64 = 0;
+        var map_boss_hc: u64 = 0;
+        var dungeon_boss_hc: u64 = 0;
+        var player_kills_hc: u64 = 0;
+
+        // sc stats
+        var played_seconds_sc: u64 = 0;
+        var monster_kills_sc: u64 = 0;
+
+        var dclone_sc: u64 = 0;
+        var dclonet2_sc: u64 = 0;
+        var rathma_sc: u64 = 0;
+        var rathmat2_sc: u64 = 0;
+        var lucion_sc: u64 = 0;
+        var luciont2_sc: u64 = 0;
+
+        var trist_sc: u64 = 0;
+        var ancients_sc: u64 = 0;
+
+        var andariel_sc: u64 = 0;
+        var duriel_sc: u64 = 0;
+        var mephisto_sc: u64 = 0;
+        var diablo_sc: u64 = 0;
+        var baal_sc: u64 = 0;
+
+        var deaths_sc: u64 = 0;
+        var map_boss_sc: u64 = 0;
+        var dungeon_boss_sc: u64 = 0;
+        var player_kills_sc: u64 = 0;
+
+        while (try dir_walker.next()) |entry| {
+            if (entry.kind == .file) {
+                var ext_it = splitSequence(u8, entry.basename, ".");
+                _ = ext_it.first();
+                const extension = ext_it.rest();
+
+                const ext = std.meta.stringToEnum(ValidExtensions, extension) orelse continue;
+                switch (ext) {
+                    .@"stash.hc" => {
+                        stats_count += 1;
+                        @memset(out_buffer, 0);
+
+                        var arena = std.heap.ArenaAllocator.init(std.heap.page_allocator);
+                        defer arena.deinit();
+                        const allocator = arena.allocator();
+
+                        var parser = try Parser.init(
+                            allocator,
+                            try loadCharSave(allocator, entry.dir, entry.basename),
+                            out_buffer,
+                            isc_list,
+                            wam_list,
+                            itypes_list,
+                            item_code_map,
+                            item_type_map,
+                        );
+
+                        if (parser.buffer.len < 4) {
+                            continue;
+                        }
+
+                        const identifier = try parser.readBits(u32, 32);
+                        try verifyIdentifier(identifier, .stash);
+
+                        const version = try parser.readBits(u32, 32);
+                        if (version != 2) {
+                            continue;
+                        }
+
+                        const stash_size = try parser.readBits(u32, 32);
+                        if (parser.buffer.len != stash_size) {
+                            continue;
+                        }
+
+                        _ = try parser.readBits(u32, 32);
+
+                        const s1 = try parser.readBits(u8, 8);
+                        const s2 = try parser.readBits(u8, 8);
+                        // "st"
+                        if (s1 != 115 and s2 != 116) {
+                            continue;
+                        }
+
+                        const played = try parser.readBits(u32, 32);
+                        played_seconds_hc += played;
+                        const kills = try parser.readBits(u32, 32);
+                        monster_kills_hc += kills;
+
+                        const dclone = try parser.readBits(u16, 16);
+                        dclone_hc += dclone;
+                        const dclonet2 = try parser.readBits(u16, 16);
+                        dclonet2_hc += dclonet2;
+                        const rathma = try parser.readBits(u16, 16);
+                        rathma_hc += rathma;
+                        const rathmat2 = try parser.readBits(u16, 16);
+                        rathmat2_hc += rathmat2;
+                        const lucion = try parser.readBits(u16, 16);
+                        lucion_hc += lucion;
+                        const luciont2 = try parser.readBits(u16, 16);
+                        luciont2_hc += luciont2;
+
+                        const trist = try parser.readBits(u16, 16);
+                        trist_hc += trist;
+                        const ancients = try parser.readBits(u16, 16);
+                        ancients_hc += ancients;
+
+                        const andariel = try parser.readBits(u16, 16);
+                        andariel_hc += andariel;
+                        const duriel = try parser.readBits(u16, 16);
+                        duriel_hc += duriel;
+                        const mephisto = try parser.readBits(u16, 16);
+                        mephisto_hc += mephisto;
+                        const diablo = try parser.readBits(u16, 16);
+                        diablo_hc += diablo;
+                        const baal = try parser.readBits(u16, 16);
+                        baal_hc += baal;
+
+                        const deaths = try parser.readBits(u16, 16);
+                        deaths_hc += deaths;
+                        const map_boss = try parser.readBits(u16, 16);
+                        map_boss_hc += map_boss;
+                        const dungeon_boss = try parser.readBits(u16, 16);
+                        dungeon_boss_hc += dungeon_boss;
+                        const player_kills = try parser.readBits(u16, 16);
+                        player_kills_hc += player_kills;
+                    },
+                    .stash => {
+                        stats_count += 1;
+                        @memset(out_buffer, 0);
+
+                        var arena = std.heap.ArenaAllocator.init(std.heap.page_allocator);
+                        defer arena.deinit();
+                        const allocator = arena.allocator();
+
+                        var parser = try Parser.init(
+                            allocator,
+                            try loadCharSave(allocator, entry.dir, entry.basename),
+                            out_buffer,
+                            isc_list,
+                            wam_list,
+                            itypes_list,
+                            item_code_map,
+                            item_type_map,
+                        );
+
+                        if (parser.buffer.len < 4) {
+                            continue;
+                        }
+
+                        const identifier = try parser.readBits(u32, 32);
+                        try verifyIdentifier(identifier, .stash);
+
+                        const version = try parser.readBits(u32, 32);
+                        if (version != 2) {
+                            continue;
+                        }
+
+                        const stash_size = try parser.readBits(u32, 32);
+                        if (parser.buffer.len != stash_size) {
+                            continue;
+                        }
+
+                        _ = try parser.readBits(u32, 32);
+
+                        const s1 = try parser.readBits(u8, 8);
+                        const s2 = try parser.readBits(u8, 8);
+                        // "st"
+                        if (s1 != 115 and s2 != 116) {
+                            continue;
+                        }
+
+                        const played = try parser.readBits(u32, 32);
+                        played_seconds_sc += played;
+                        const kills = try parser.readBits(u32, 32);
+                        monster_kills_sc += kills;
+
+                        const dclone = try parser.readBits(u16, 16);
+                        dclone_sc += dclone;
+                        const dclonet2 = try parser.readBits(u16, 16);
+                        dclonet2_sc += dclonet2;
+                        const rathma = try parser.readBits(u16, 16);
+                        rathma_sc += rathma;
+                        const rathmat2 = try parser.readBits(u16, 16);
+                        rathmat2_sc += rathmat2;
+                        const lucion = try parser.readBits(u16, 16);
+                        lucion_sc += lucion;
+                        const luciont2 = try parser.readBits(u16, 16);
+                        luciont2_sc += luciont2;
+
+                        const trist = try parser.readBits(u16, 16);
+                        trist_sc += trist;
+                        const ancients = try parser.readBits(u16, 16);
+                        ancients_sc += ancients;
+
+                        const andariel = try parser.readBits(u16, 16);
+                        andariel_sc += andariel;
+                        const duriel = try parser.readBits(u16, 16);
+                        duriel_sc += duriel;
+                        const mephisto = try parser.readBits(u16, 16);
+                        mephisto_sc += mephisto;
+                        const diablo = try parser.readBits(u16, 16);
+                        diablo_sc += diablo;
+                        const baal = try parser.readBits(u16, 16);
+                        baal_sc += baal;
+
+                        const deaths = try parser.readBits(u16, 16);
+                        deaths_sc += deaths;
+                        const map_boss = try parser.readBits(u16, 16);
+                        map_boss_sc += map_boss;
+                        const dungeon_boss = try parser.readBits(u16, 16);
+                        dungeon_boss_sc += dungeon_boss;
+                        const player_kills = try parser.readBits(u16, 16);
+                        player_kills_sc += player_kills;
+                    },
+                    else => {
+                        // log
+                        continue;
+                    },
+                }
+            }
+        }
+        const stash_time_end = stats_timer.read();
+        main_log.err(
+            "mode, time_played, kills, dclone, dclone_t2, rathma, rathma_t2, lucion, lucion_t2, trist, ancients, andariel, duriel, mephisto, diablo, baal, deaths, map_bosses, dungeon_bosses, player_kills",
+            .{},
+        );
+        main_log.err(
+            "hardcore, {d}, {d}, {d}, {d}, {d}, {d}, {d}, {d}, {d}, {d}, {d}, {d}, {d}, {d}, {d}, {d}, {d}, {d}, {d}",
+            .{
+                played_seconds_hc,
+                monster_kills_hc,
+
+                dclone_hc,
+                dclonet2_hc,
+                rathma_hc,
+                rathmat2_hc,
+                lucion_hc,
+                luciont2_hc,
+
+                trist_hc,
+                ancients_hc,
+
+                andariel_hc,
+                duriel_hc,
+                mephisto_hc,
+                diablo_hc,
+                baal_hc,
+
+                deaths_hc,
+                map_boss_hc,
+                dungeon_boss_hc,
+                player_kills_hc,
+            },
+        );
+        main_log.err(
+            "softcore, {d}, {d}, {d}, {d}, {d}, {d}, {d}, {d}, {d}, {d}, {d}, {d}, {d}, {d}, {d}, {d}, {d}, {d}, {d}",
+            .{
+                played_seconds_sc,
+                monster_kills_sc,
+
+                dclone_sc,
+                dclonet2_sc,
+                rathma_sc,
+                rathmat2_sc,
+                lucion_sc,
+                luciont2_sc,
+
+                trist_sc,
+                ancients_sc,
+
+                andariel_sc,
+                duriel_sc,
+                mephisto_sc,
+                diablo_sc,
+                baal_sc,
+
+                deaths_sc,
+                map_boss_sc,
+                dungeon_boss_sc,
+                player_kills_sc,
+            },
+        );
+
+        main_log.err("Total time: {d} seconds | Count: {d}", .{ stash_time_end / 1_000_000_000, stats_count });
     }
 }
 
