@@ -336,7 +336,8 @@ pub fn main() !void {
         main_log.err("Total time: {d} seconds | Count: {d}", .{ stash_time_end / 1_000_000_000, stash_count });
     } else if (std.mem.eql(u8, read_type, "accountstats")) {
         var stats_timer = try std.time.Timer.start();
-        var stats_count: u32 = 0;
+        var stats_count_hc: u32 = 0;
+        var stats_count_sc: u32 = 0;
 
         // hc stats
         var played_seconds_hc: u64 = 0;
@@ -397,7 +398,7 @@ pub fn main() !void {
                 const ext = std.meta.stringToEnum(ValidExtensions, extension) orelse continue;
                 switch (ext) {
                     .@"stash.hc" => {
-                        stats_count += 1;
+                        stats_count_hc += 1;
                         @memset(out_buffer, 0);
 
                         var arena = std.heap.ArenaAllocator.init(std.heap.page_allocator);
@@ -485,7 +486,7 @@ pub fn main() !void {
                         player_kills_hc += player_kills;
                     },
                     .stash => {
-                        stats_count += 1;
+                        stats_count_sc += 1;
                         @memset(out_buffer, 0);
 
                         var arena = std.heap.ArenaAllocator.init(std.heap.page_allocator);
@@ -641,7 +642,11 @@ pub fn main() !void {
             },
         );
 
-        main_log.err("Total time: {d} seconds | Count: {d}", .{ stash_time_end / 1_000_000_000, stats_count });
+        main_log.err("Total time: {d} seconds | Count (HC): {d} | Count (SC): {d}", .{
+            stash_time_end / 1_000_000_000,
+            stats_count_hc,
+            stats_count_sc,
+        });
     }
 }
 
