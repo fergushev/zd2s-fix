@@ -1,4 +1,5 @@
 const std = @import("std");
+const builtin = @import("builtin");
 const splitSequence = std.mem.splitSequence;
 const main_log = std.log.scoped(.Main);
 
@@ -336,6 +337,7 @@ pub fn main() !void {
         main_log.err("Total time: {d} seconds | Count: {d}", .{ stash_time_end / 1_000_000_000, stash_count });
     } else if (std.mem.eql(u8, read_type, "accountstats")) {
         var stats_timer = try std.time.Timer.start();
+        var unique_accounts: u32 = 0;
         var stats_count_hc: u32 = 0;
         var stats_count_sc: u32 = 0;
 
@@ -389,16 +391,29 @@ pub fn main() !void {
         var dungeon_boss_sc: u64 = 0;
         var player_kills_sc: u64 = 0;
 
+        var account_map = std.StringHashMap(bool).init(allocator_main);
+        defer account_map.deinit();
+
         while (try dir_walker.next()) |entry| {
             if (entry.kind == .file) {
                 var ext_it = splitSequence(u8, entry.basename, ".");
                 _ = ext_it.first();
                 const extension = ext_it.rest();
-
                 const ext = std.meta.stringToEnum(ValidExtensions, extension) orelse continue;
+
+                const delim = if (builtin.target.os.tag == .windows) "\\" else "/";
+                var stash_it = splitSequence(u8, entry.path, delim);
+                const stash_dir = stash_it.first();
+                _ = stash_it.rest();
+
                 switch (ext) {
                     .@"stash.hc" => {
                         stats_count_hc += 1;
+                        if (!account_map.contains(stash_dir)) {
+                            const dir_copy = try allocator_main.dupe(u8, stash_dir);
+                            try account_map.put(dir_copy, true);
+                            unique_accounts += 1;
+                        }
                         @memset(out_buffer, 0);
 
                         var arena = std.heap.ArenaAllocator.init(std.heap.page_allocator);
@@ -487,6 +502,11 @@ pub fn main() !void {
                     },
                     .stash => {
                         stats_count_sc += 1;
+                        if (!account_map.contains(stash_dir)) {
+                            const dir_copy = try allocator_main.dupe(u8, stash_dir);
+                            try account_map.put(dir_copy, true);
+                            unique_accounts += 1;
+                        }
                         @memset(out_buffer, 0);
 
                         var arena = std.heap.ArenaAllocator.init(std.heap.page_allocator);
@@ -642,10 +662,11 @@ pub fn main() !void {
             },
         );
 
-        main_log.err("Total time: {d} seconds | Count (HC): {d} | Count (SC): {d}", .{
+        main_log.err("Total time: {d} seconds | Count (HC): {d} | Count (SC): {d} | Count (Unique): {d}", .{
             stash_time_end / 1_000_000_000,
             stats_count_hc,
             stats_count_sc,
+            unique_accounts,
         });
     }
 }
